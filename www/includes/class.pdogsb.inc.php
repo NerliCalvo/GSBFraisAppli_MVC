@@ -37,13 +37,24 @@
  * @link      http://www.php.net/manual/fr/book.pdo.php PHP Data Objects sur php.net
  */
 class PdoGsb {
+    // connexion en localhost
 
-    private static $serveur = 'mysql:host=localhost';
-    private static $bdd = 'dbname=gsb_frais';
-    private static $user = 'Gsb';
-    private static $mdp = 'secret';
+      private static $serveur = 'mysql:host=localhost';
+      private static $bdd = 'dbname=gsb_frais';
+      private static $user = 'Gsb';
+      private static $mdp = 'secret';
+      private static $monPdo;
+      private static $monPdoGsb = null;
+     
+
+/*connexion en externe
+    private static $serveur = 'db5017892103.hosting-data.io';
+    private static $bdd = 'dbname=dbs14251334';
+    private static $user = 'dbu2710385';
+    private static $mdp = 'CalvoNerli2025';
     private static $monPdo;
     private static $monPdoGsb = null;
+    */
 
     /**
      * Constructeur privé, crée l'instance de PDO qui sera sollicitée
@@ -263,7 +274,7 @@ class PdoGsb {
                 . 'SET nbjustificatifs = :unNbJustificatifs '
                 . 'WHERE fichefrais.idvisiteur = :unIdVisiteur '
                 . 'AND fichefrais.mois = :unMois');
-        $requetePrepare->bindParam(':unNbJustificatifs',$nbJustificatifs, PDO::PARAM_INT);
+        $requetePrepare->bindParam(':unNbJustificatifs', $nbJustificatifs, PDO::PARAM_INT);
         $requetePrepare->bindParam(':unIdVisiteur', $idVisiteur, PDO::PARAM_STR);
         $requetePrepare->bindParam(':unMois', $mois, PDO::PARAM_STR);
         $requetePrepare->execute();
@@ -554,26 +565,108 @@ class PdoGsb {
         return $requetePrepare->fetchAll();
     }
 
-      /**
-     * Retourne la somme du montant total des frais hors forfait+celui des frais forfaitisés
+    /**
+     * Met à jour la somme du montant total des frais hors forfait et des frais forfaitisés.
      * @param string $idVisiteur     ID du visiteur
      * @param int $mois            Mois sous la forme aaaamm
      * @param int $montantValide             Resultat de la somme du montant des frais forfaitisés+celui des frais hors forfait
      * @return int                   Montant total des frais forfaitisés et hors forfait
      */
-    public function majMontantValide($idVisiteur, $mois, $montantValide)
-    {
+    public function majMontantValide($idVisiteur, $mois, $montantValide) {
         $requetePrepare = PdoGSB::$monPdo->prepare(
-            'UPDATE fichefrais '
-            . 'SET montantvalide = :total '
-            . 'WHERE idvisiteur = :unIdVisiteur  '
-            . 'AND mois = :unMois'
+                'UPDATE fichefrais '
+                . 'SET montantvalide = :total '
+                . 'WHERE idvisiteur = :unIdVisiteur  '
+                . 'AND mois = :unMois'
         );
-        $requetePrepare->bindParam(':total',$montantValide, PDO::PARAM_STR);
+        $requetePrepare->bindParam(':total', $montantValide, PDO::PARAM_STR);
         $requetePrepare->bindParam(':unIdVisiteur', $idVisiteur, PDO::PARAM_STR);
         $requetePrepare->bindParam(':unMois', $mois, PDO::PARAM_STR);
         $requetePrepare->execute();
     }
+    
+     /**
+     * Retourne les nom et prenom d'un visiteur
+     *
+     * @param String $id id du visiteur
+     *
+     * @return le nom et le prénom sous la forme d'un tableau associatif
+     */
+
+    public function getLeVisiteur($id) {
+        $requetePrepare = PdoGsb::$monPdo->prepare(
+                'SELECT nom, prenom '
+                . 'FROM visiteur '
+                . 'WHERE id = :unId '
+        );
+        $requetePrepare->bindParam(':unId', $id, PDO::PARAM_STR);
+        $requetePrepare->execute();
+        return $requetePrepare->fetch(); // fetch() recupere le resultat 
+    }
+    
+    /**
+     * Retourne les visiteurs qui ont des fiches VA
+     *
+     * @param String $idVisiteur id du visiteur
+     * @param String $mois mois de la fiche VA
+     *
+     * @return le visiteur sous la forme d'un tableau associatif
+     */
+
+    public function getVisiteurFicheValide($idVisiteur, $mois) {
+        $requetePrepare = PdoGSB::$monPdo->prepare(
+                'SELECT fichefrais.idvisiteur, fichefrais.mois, visiteur.nom, visiteur.prenom '
+                . 'FROM fichefrais '
+                . 'JOIN visiteur ON visiteur.id = fichefrais.idvisiteur '
+                . 'WHERE fichefrais.idetat = "VA" '
+        );
+        $requetePrepare->bindParam(':unIdVisiteur', $idVisiteur, PDO::PARAM_STR);
+        $requetePrepare->bindParam(':unMois', $mois, PDO::PARAM_STR);
+        $requetePrepare->execute();
+        return $requetePrepare->fetchAll();
+    }
+
+    /**
+     * Retourne la liste de tous les visiteurs qui ont des fiches validées.
+     *
+     * @return array     la liste de tous les visiteurs sous forme de tableau associatif.
+     */
+    public function getLesVisiteursDontFicheVA() {
+        $requetePrepare = PdoGsb::$monPdo->prepare(
+                'SELECT *'
+                . 'FROM visiteur join fichefrais on(id=idvisiteur)'
+                . 'WHERE fichefrais.idetat="VA"'
+                . 'ORDER BY nom'
+        );
+        $requetePrepare->execute();
+        return $requetePrepare->fetchAll();
+    }
+    
+    /**
+     * Retourne la liste de tous les mois qui ont des fiches validées.
+     *
+     * @return array     la liste de tous les visiteurs sous forme de tableau associatif.
+     */
 
 
+    public function getLesMoisDontFicheVA() {
+        $requetePrepare = PdoGSB::$monPdo->prepare(
+                'SELECT distinct fichefrais.mois AS mois FROM fichefrais '
+                . 'WHERE fichefrais.idetat="VA"'
+                . 'ORDER BY fichefrais.mois desc'
+        );
+        $requetePrepare->execute();
+        $lesMois = array();
+        while ($laLigne = $requetePrepare->fetch()) {
+            $mois = $laLigne['mois'];
+            $numAnnee = substr($mois, 0, 4);
+            $numMois = substr($mois, 4, 2);
+            $lesMois[] = array(
+                'mois' => $mois,
+                'numAnnee' => $numAnnee,
+                'numMois' => $numMois
+            );
+        }
+        return $lesMois;
+    }
 }

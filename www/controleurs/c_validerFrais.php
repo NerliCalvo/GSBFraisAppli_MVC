@@ -18,10 +18,10 @@ $action = filter_input(INPUT_GET, 'action', FILTER_SANITIZE_SPECIAL_CHARS); //on
 
 switch ($action) {
     case 'choixVisiteur':
-        $lesvisiteurs = $pdo->getVisiteurs();
-        $lesCles[] = array_keys($lesvisiteurs);
+        $visiteurs = $pdo->getVisiteurs();
+        $lesCles[] = array_keys($visiteurs);
         $visiteurASelectionner = $lesCles[0];
-        $mois = getLesDouzeDerniersMois();
+        $mois2 = getLesDouzeDerniersMois();
         include 'vues/v_choixVisiteurEtMois.php';
         break;
     case 'afficherFrais':
@@ -34,9 +34,17 @@ switch ($action) {
         $moisASelectionner = $mois;
         $lesFraisForfait = $pdo->getLesFraisForfait($lesvisiteurs, $mois);
         $lesFraisHorsForfait = $pdo->getLesFraisHorsForfait($lesvisiteurs, $mois);
-        $nbjustificatifs = $pdo->getNbjustificatifs($lesvisiteurs, $mois);
+        
+          if (empty($lesFraisForfait)&& empty($lesFraisHorsForfait)){
+            ajouterErreur('Pas de fiche de frais pour ce visiteur ce mois');
+            include 'vues/v_erreurs.php';
+            include 'vues/v_choixVisiteurEtMois.php';
+            } else {
+            
+            $nbjustificatifs = $pdo->getNbjustificatifs($lesvisiteurs, $mois);
+            include 'vues/v_validerFrais.php';
+        }
         //var_dump($nbjustificatifs);
-        include 'vues/v_validerFrais.php';
         break;
     case 'corrigerFraisForfait':
         // il recup les frais met a jours la bdd et reaffiche tt 
@@ -47,6 +55,7 @@ switch ($action) {
         $pdo->majFraisForfait($lesvisiteurs, $mois, $lesFraisF);
         //var_dump($mois);
         $mois2 = getLesDouzeDerniersMois();
+        
         $lesFraisForfait = $pdo->getLesFraisForfait($lesvisiteurs, $mois);
         $lesFraisHorsForfait = $pdo->getLesFraisHorsForfait($lesvisiteurs, $mois);
         $visiteurs = $pdo->getVisiteurs();
@@ -111,18 +120,15 @@ switch ($action) {
         var_dump($TotalFrais) ;
         $montantValide = $pdo->majMontantValide($lesvisiteurs, $mois, $TotalFrais);
         $idetat = $pdo->majEtatFicheFrais($lesvisiteurs, $mois, 'VA');
+        $VisiteurFicheValide = $pdo->getLeVisiteur($lesvisiteurs);
+        $nom =  $VisiteurFicheValide['nom'];
+        $prenom =  $VisiteurFicheValide['prenom'];
+        var_dump($VisiteurFicheValide);
         include 'vues/v_validerAvecSucces.php';
         break;
 }
 
 
 
-
-//1 addition des frais forfait(multiplications de montant fois quantites selon id) ok
-//2 addition des frais hors forfait ok
-  //     3 addition des deux montants ok
-   //     4mettre le montant a jours ok
-     //   et passer l etat de CL a VA ok
-// faire la vue validé avec succès
         
 

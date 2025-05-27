@@ -6,7 +6,7 @@
             <label for="lsVisiteur" accesskey="n">Choisir le visiteur : </label>
             <select id="lsVisiteur" name="lsVisiteur" class="form-control">
                 <?php
-                foreach ($lesvisiteurs as $unVisiteurs) {
+                foreach ($visiteurs as $unVisiteurs) {
                     $id = $unVisiteurs['id'];
                     $nom = $unVisiteurs['nom'];
                     $prenom = $unVisiteurs['prenom'];
@@ -40,7 +40,7 @@
             <label for="lstMois" accesskey="n">Mois : </label>
             <select id="lstMois" name="lstMois" class="form-control">
                 <?php
-                foreach ($mois as $unMois) {
+                foreach ($mois2 as $unMois) {
                     $mois = $unMois['mois'];
                     $numAnnee = $unMois['numAnnee'];
                     $numMois = $unMois['numMois'];
